@@ -1,16 +1,31 @@
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { KeyboardAvoidingView } from 'react-native';
+import { FIREBASE_AUTH } from '../../firebase_config';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const auth = FIREBASE_AUTH;
 
-  const handleRegister = () => {
-    // TODO: Add registration logic
-    router.replace('/(tabs)');
+  const handleRegister = async () => {
+    setLoading(true);
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            // Navigate to the next screen or show success message
+        } catch (error) {
+            console.error(error);
+            // Show error message to the user
+        } finally {
+            setLoading(false);
+            router.replace('/(auth)/login');
+        }
+    
   };
 
   return (
@@ -38,7 +53,10 @@ export default function RegisterScreen() {
         onChangeText={setConfirmPassword}
         secureTextEntry
       />
+      {loading ? <ActivityIndicator size="large" color="#0000ff" /> 
+        : <>
       <Button title="Register" onPress={handleRegister} />
+      </>}
       <Text style={styles.link} onPress={() => router.push('../login')}>Already have an account? Login</Text>
     </View>
   );
