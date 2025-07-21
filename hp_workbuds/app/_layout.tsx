@@ -5,6 +5,47 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { UserProvider } from '@/contexts/UserContext';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useEffect } from 'react';
+import { useRouter, useSegments } from 'expo-router';
+
+function RootLayoutNav() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (isAuthenticated && inAuthGroup) {
+      // Redirect to tabs if authenticated and in auth screens
+      router.replace('/(tabs)');
+    } else if (!isAuthenticated && !inAuthGroup) {
+      // Redirect to login if not authenticated and not in auth screens
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated, segments, isLoading]);
+
+  if (isLoading) {
+    return <LoadingSpinner text="Loading..." />;
+  }
+
+  return (
+    <ThemeProvider value={DefaultTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="dark" />
+    </ThemeProvider>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -13,19 +54,16 @@ export default function RootLayout() {
   });
 
   if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
+    return <LoadingSpinner text="Loading fonts..." />;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
-      <Stack initialRouteName="(auth)/login">
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <UserProvider>
+          <RootLayoutNav />
+        </UserProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
